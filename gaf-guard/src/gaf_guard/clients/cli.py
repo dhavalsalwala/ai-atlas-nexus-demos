@@ -1,35 +1,27 @@
 import asyncio
+import json
 
 #!/usr/bin/env python
-import os
-from pathlib import Path
-
-from acp_sdk.client import Client
-from acp_sdk.models import Message, MessagePart
-
-from gaf_guard.clients.stream_adaptors import get_adapter
-from gaf_guard.toolkit.file_utils import resolve_file_paths
-
-
-os.environ["KMP_DUPLICATE_LIB_OK"] = "True"
-import asyncio
-import json
 import os
 import signal
 import sys
 import time
 from datetime import datetime
-from typing import Annotated, Dict, List
+from pathlib import Path
+from typing import Dict, List
 
-import typer
+from acp_sdk.client import Client
+from acp_sdk.models import Message, MessagePart
 from rich.align import Align
 from rich.console import Console, Group
 from rich.live import Live
 from rich.panel import Panel
 from rich.prompt import Prompt
 
+from gaf_guard.clients.stream_adaptors import get_adapter
 from gaf_guard.core.models import UserInputType, WorkflowMessage
 from gaf_guard.toolkit.enums import MessageType, Role
+from gaf_guard.toolkit.file_utils import resolve_file_paths
 
 
 def signal_handler(sig, frame):
@@ -52,8 +44,6 @@ STREAM_ADAPTORS = {}
 GAF_GUARD_ROOT = Path(__file__).parent.parent.absolute()
 signal.signal(signal.SIGINT, signal_handler)
 
-app = typer.Typer()
-
 console = Console(log_time=True)
 
 run_configs = {
@@ -71,7 +61,7 @@ run_configs = {
 resolve_file_paths(run_configs)
 
 
-async def run_stream(host, port):
+async def run_cli_client(host, port):
     status = console.status(
         f"[bold yellow] Trying to connect to [italic blue][GAF Guard][/italic blue] using host: [bold white]{host}[/] and port: [bold white]{port}[/]. To abort press CTRL+C",
     )
@@ -208,28 +198,3 @@ async def run_stream(host, port):
                 if COMPLETED:
                     processing.stop()
                     break
-
-
-@app.command()
-def main(
-    host: Annotated[
-        str,
-        typer.Option(
-            help="Please enter GAF Guard Host.",
-            rich_help_panel="Hostname",
-        ),
-    ] = "localhost",
-    port: Annotated[
-        int,
-        typer.Option(
-            help="Please enter GAF Guard Port.",
-            rich_help_panel="Port",
-        ),
-    ] = 8000,
-):
-    os.system("clear")
-    asyncio.run(run_stream(host=host, port=port))
-
-
-if __name__ == "__main__":
-    app()

@@ -51,42 +51,60 @@ def benchmark(
 
 
 @app.command()
-def serve(config_file):
-    start_server(config_file)
-
-
-@app.command()
-def client(
-    client: Annotated[
+def serve(
+    ctx: typer.Context,
+    config: Annotated[
         str,
-        typer.Argument(
-            help="Please enter GAF Guard Client type",
-            rich_help_panel="GAF Guard Client",
+        typer.Option(
+            help="Please enter GAF Guard config file location.",
+            rich_help_panel="Configuration File",
         ),
     ],
     host: Annotated[
         str,
-        typer.Argument(help="Please enter GAF Guard Host.", rich_help_panel="Hostname"),
+        typer.Option(help="Please enter GAF Guard Host.", rich_help_panel="Hostname"),
     ] = "localhost",
     port: Annotated[
         int,
-        typer.Argument(help="Please enter GAF Guard Port.", rich_help_panel="Port"),
+        typer.Option(help="Please enter GAF Guard Port.", rich_help_panel="Port"),
+    ] = 8000,
+):
+    start_server(config, host, port)
+
+
+@app.command()
+def client(
+    ctx: typer.Context,
+    type: Annotated[
+        str,
+        typer.Option(
+            help="Please enter GAF Guard client type.",
+            rich_help_panel="Configuration File",
+        ),
+    ],
+    host: Annotated[
+        str,
+        typer.Option(help="Please enter GAF Guard Host.", rich_help_panel="Hostname"),
+    ] = "localhost",
+    port: Annotated[
+        int,
+        typer.Option(help="Please enter GAF Guard Port.", rich_help_panel="Port"),
     ] = 8000,
 ):
     os.system("clear")
-    console.rule(f"[bold blue]Launching GAF Guard {client.title()} Client[/bold blue]")
+    console.rule(f"[bold blue]Launching GAF Guard {type.title()} Client[/bold blue]")
     try:
-        if client == "streamlit":
+        if type == "streamlit":
             process = subprocess.Popen(
-                ["streamlit", "run", f"src/gaf_guard/clients/{client}.py"],
+                ["streamlit", "run", f"src/gaf_guard/clients/{type}.py"],
                 stderr=subprocess.STDOUT,
                 text=True,
             )
-        elif client == "cli":
+        elif type == "cli":
             process = subprocess.Popen(
                 [
                     "python",
-                    f"src/gaf_guard/clients/{client}.py",
+                    f"src/gaf_guard/clients/{type}.py",
                     "--host",
                     host,
                     "--port",
@@ -104,5 +122,5 @@ def client(
         print(e.stderr)
 
 
-# if __name__ == "__main__":
-#     app()
+if __name__ == "__main__":
+    app()

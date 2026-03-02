@@ -13,7 +13,13 @@ from rich.console import Console
 
 from gaf_guard.clients.stream_adaptors import get_adapter
 from gaf_guard.core.models import WorkflowMessage
-from gaf_guard.toolkit.enums import MessageType, Role, StreamStatus, UserInputType
+from gaf_guard.toolkit.enums import (
+    MessageType,
+    Role,
+    ServerStatus,
+    StreamStatus,
+    UserInputType,
+)
 from gaf_guard.toolkit.file_utils import resolve_file_paths
 
 
@@ -58,11 +64,22 @@ st.markdown(
 )
 
 # Declare global session variables
+if "server_status" not in st.session_state:
+    st.session_state.server_status = ServerStatus.DISCONNECTED
+if "host" not in st.session_state:
+    st.session_state.host = "localhost"
+if "port" not in st.session_state:
+    st.session_state.port = 8000
 st.session_state.priority = ["low", "medium", "high"]
 st.session_state.initial_risks_master = ["Toxic output", "Hallucination"]
 st.set_page_config(
     page_title="GAF Guard - A real-time monitoring system for risk assessment and drift monitoring.",
     layout="wide",  # This sets the app to wide mode
+    menu_items={
+        "Get Help": "https://github.com/IBM/ai-atlas-nexus-demos/tree/main/gaf-guard",
+        "Report a bug": "https://github.com/IBM/ai-atlas-nexus-demos/issues",
+        "About": "### GAF-Guard \n GAF Guard is an AI framework that can effectively detect and manage risks associated with LLMs for a given use-case. The framework leverages agents to identify risks tailored to a specific use case, generate drift and risk monitors, and establish real-time monitoring functions for LLMs. By integrating these capabilities, our approach aims to provide a comprehensive risk management framework that addresses the unique requirements of each LLM application.",
+    },
     # initial_sidebar_state="expanded",
 )
 console = Console(log_time=True)
@@ -414,95 +431,92 @@ def initial_risks_selector():
     icon=":material/login:",
 )
 def connect_screen_dialog():
-    if hasattr(st.session_state, "error"):
-        st.error(st.session_state.error, icon="🚨")
+
+    async def ping_server():
+        await Client(
+            base_url=f"http://{st.session_state.host}:{st.session_state.port}",
+            verify=True,
+        ).ping()
+
+    def server_connect():
+        st.session_state.server_status = ServerStatus.CONNECTING
+
     with st.form("login_form"):
-        input_host = st.text_input("GAF Guard Host", value="localhost")
-        input_port = st.number_input("GAF Guard Port", value=8000)
-        submitted = st.form_submit_button("Connect", type="primary")
-
-    if submitted:
-        if hasattr(st.session_state, "error"):
-            del st.session_state["error"]
-        st.session_state.host = input_host
-        st.session_state.port = input_port
-        st.rerun()
-
-
-@st.dialog(
-    "GAF Guard Connect",
-    width="medium",
-    dismissible=False,
-    icon=":material/login:",
-)
-def connect():
-
-    async def ping_server(client):
-        await client.ping()
-
-    with st.status(
-        f"Connecting to GAF Guard using host: :blue[**{st.session_state.host}**] and port: :blue[**{st.session_state.port}**]",
-        expanded=True,
-    ) as status:
-        try:
-            client = Client(
-                base_url=f"http://{st.session_state.host}:{st.session_state.port}",
-                verify=True,
-            )
-            # asyncio.run(ping_server(client))
-            st.write("Client created...")
-        except Exception as e:
-            st.session_state.error = "Failed to connect. Check hostname and port."
-            st.rerun()
-
-        st.session_state.client_session = client.session()
-        st.write("Client session created...")
-
-        st.session_state.drift_threshold = 8
-        st.session_state.disabled_input = False
-        st.session_state.stream_status = StreamStatus.STOPPED
-        st.session_state.sidebar_display = "settings_edit"
-        st.session_state.messages = [
-            WorkflowMessage(
-                name="GAF Guard Client",
-                type=MessageType.CLIENT_INPUT,
-                role=Role.USER,
-                accept=UserInputType.USER_INTENT,
-                run_configs=run_configs,
-            )
-        ]
-        st.write("Client initialisation done...")
-
-        # print information in the client console window
-        console.print(
-            f"[[bold white]{datetime.now().strftime('%d-%m-%Y %H:%M:%S')}[/]] [italic bold white] :rocket: Connected to GAF Guard Server at[/italic bold white] [bold white]{st.session_state.host}:{st.session_state.port}[/bold white]"
+        st.session_state.host = st.text_input(
+            "GAF Guard Host",
+            value=st.session_state.host,
+            disabled=st.session_state.server_status == ServerStatus.CONNECTING,
         )
-        console.print(
-            f"[[bold white]{datetime.now().strftime('%d-%m-%Y %H:%M:%S')}[/]] Client Id: {st.session_state.client_session._session.id}"
+        st.session_state.port = st.number_input(
+            "GAF Guard Port",
+            value=st.session_state.port,
+            disabled=st.session_state.server_status == ServerStatus.CONNECTING,
         )
-        #     console.print(
-        #         f"""
-        #     You can now view your Streamlit app in your browser.
+        submitted = st.form_submit_button(
+            "Connect", type="primary", on_click=server_connect
+        )
 
-        #     Local URL: http://{st.session_state.host}:{st.session_state.port}
-        # """
-        #     )
-
-        status.update(
-            label=f":material/rocket_launch: Connected to :yellow[**GAF Guard**] Server: :orange-badge[:material/check: {st.session_state.host}:{st.session_state.port}]",
-            state="complete",
+    if st.session_state.server_status == ServerStatus.FAILED:
+        st.error("Failed to connect. Please check hostname and port.", icon="🚨")
+    elif submitted:
+        with st.status(
+            f"Connecting to GAF Guard using host: :blue[**{st.session_state.host}**] and port: :blue[**{st.session_state.port}**]",
             expanded=True,
-        )
-        time.sleep(1)
+        ) as status:
+            try:
+                # ping server for health check
+                asyncio.run(ping_server())
 
-    st.rerun()
+                client = Client(
+                    base_url=f"http://{st.session_state.host}:{st.session_state.port}",
+                    verify=True,
+                )
+                st.write("Client created...")
+                time.sleep(0.5)
+                st.session_state.client_session = client.session()
+                st.write("Client session created...")
+                time.sleep(0.5)
+                st.session_state.server_status = ServerStatus.CONNECTED
 
+                st.session_state.drift_threshold = 8
+                st.session_state.disabled_input = False
+                st.session_state.stream_status = StreamStatus.STOPPED
+                st.session_state.sidebar_display = "settings_edit"
+                st.session_state.messages = [
+                    WorkflowMessage(
+                        name="GAF Guard Client",
+                        type=MessageType.CLIENT_INPUT,
+                        role=Role.USER,
+                        accept=UserInputType.USER_INTENT,
+                        run_configs=run_configs,
+                    )
+                ]
+                st.write("Client initialisation done...")
 
-def submit_input():
-    st.session_state.sidebar_display = "settings_view"
+                # print information in the client console window
+                console.print(
+                    f"[[bold white]{datetime.now().strftime('%d-%m-%Y %H:%M:%S')}[/]] [italic bold white] :rocket: Connected to GAF Guard Server at[/italic bold white] [bold white]{st.session_state.host}:{st.session_state.port}[/bold white]"
+                )
+                console.print(
+                    f"[[bold white]{datetime.now().strftime('%d-%m-%Y %H:%M:%S')}[/]] Client Id: {st.session_state.client_session._session.id}"
+                )
+
+                status.update(
+                    label=f":material/rocket_launch: Connected to :yellow[**GAF Guard**] Server: :orange-badge[:material/check: {st.session_state.host}:{st.session_state.port}]",
+                    state="complete",
+                    expanded=True,
+                )
+                time.sleep(1)
+            except Exception as e:
+                st.session_state.server_status = ServerStatus.FAILED
+            finally:
+                st.rerun()
 
 
 async def app():
+
+    def submit_input():
+        st.session_state.sidebar_display = "settings_view"
 
     st.title(f":yellow[GAF Guard]", text_alignment="center")
     st.subheader(
@@ -548,7 +562,6 @@ async def app():
     if not user_input:
         st.stop()
     else:
-        COMPLETED = False
         async for event in st.session_state.client_session.run_stream(
             agent="orchestrator",
             input=[
@@ -594,13 +607,10 @@ async def app():
                     st.rerun()
 
 
-if hasattr(st.session_state, "client_session"):
+if st.session_state.server_status == ServerStatus.CONNECTED:
     asyncio.run(app())
-elif (
-    not hasattr(st.session_state, "error")
-    and hasattr(st.session_state, "host")
-    and hasattr(st.session_state, "port")
-):
-    connect()
-else:
+elif st.session_state.server_status in [
+    ServerStatus.DISCONNECTED,
+    ServerStatus.FAILED,
+]:
     connect_screen_dialog()

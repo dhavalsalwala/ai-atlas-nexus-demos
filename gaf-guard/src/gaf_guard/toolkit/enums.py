@@ -48,3 +48,12 @@ class StreamStatus(CustomStrEnum):
     ACTIVE = auto()
     PAUSED = auto()
     STOPPED = auto()
+
+
+class ServerStatus(CustomStrEnum):
+
+    # User can only send below message types
+    DISCONNECTED = auto()
+    CONNECTED = auto()
+    CONNECTING = auto()
+    FAILED = auto()

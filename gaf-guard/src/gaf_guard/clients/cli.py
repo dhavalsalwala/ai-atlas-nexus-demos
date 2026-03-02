@@ -204,6 +204,16 @@ async def run_cli_client(host, port):
                     break
 
 
+async def ping_server(host: str, port: int):
+    try:
+        await Client(
+            base_url=f"http://{host}:{port}",
+            verify=True,
+        ).ping()
+    except:
+        raise Exception("Failed to connect. Please check hostname and port.")
+
+
 @app.command()
 def main(
     host: Annotated[
@@ -222,6 +232,10 @@ def main(
     ] = 8000,
 ):
     os.system("clear")
+
+    # ping server for health check
+    asyncio.run(ping_server(host, port))
+
     asyncio.run(run_cli_client(host=host, port=port))
 
 

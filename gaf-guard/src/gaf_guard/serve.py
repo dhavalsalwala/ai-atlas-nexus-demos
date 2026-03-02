@@ -6,6 +6,7 @@ from collections.abc import AsyncGenerator
 from datetime import datetime
 from functools import reduce
 from pathlib import Path
+from typing import Dict
 
 import acp_sdk
 import yaml
@@ -157,7 +158,7 @@ async def run_benchmark(
     )
 
 
-def start_server(config_file):
+def start_server(config_file: Dict, host: str = "localhost", port: int = 8000):
     os.system("clear")
     console.rule(f"[bold blue]GAF Guard[/bold blue]")
     console.print(f"[bold yellow]:rocket: Starting AI Governance Orchestrator\n")
@@ -186,9 +187,6 @@ def start_server(config_file):
             title_align="center",
         )
     )
-
-    host = system_config.GAF_GUARD_HOST
-    port = system_config.GAF_GUARD_PORT
 
     LOGGER.info(
         f"Server ver-{gaf_guard.__version__} initialized. Listening at {host}:{port}. To exit press CTRL+C"

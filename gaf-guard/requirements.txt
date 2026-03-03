@@ -1,0 +1,16 @@
+ai-atlas-nexus
+acp-sdk
+langgraph
+pydantic_settings
+typer
+python-dotenv
+deepeval
+openai
+prettytable
+isort
+pre-commit
+uvicorn==0.35.0
+streamlit>=1.54.0
+deepteam
+ollama
+opentelemetry-exporter-otlp-proto-grpc

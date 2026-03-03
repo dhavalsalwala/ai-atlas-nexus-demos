@@ -1,0 +1,13 @@
+services:
+  gaf-guard-server:
+    container_name: gaf-guard-server
+    image: dsalwala/gaf-guard-server:latest
+    environment:
+      GAF_GUARD_HOST: localhost
+      GAF_GUARD_PORT: 8000
+      RITS_API_KEY: cbc683b3a1a7c52d2a73008b785d2811
+      RITS_API_URL: https://inference-3scale-apicast-production.apps.rits.fmaas.res.ibm.com
+      OLLAMA_API_URL: https://dsalwala-ollama.hf.space
+    command: python gaf_guard/redirect.py serve risk_assessment.yaml
+    ports:
+      - 8000:8000

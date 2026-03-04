@@ -1,6 +1,7 @@
 import asyncio
 import json
 import os
+import sys
 import time
 from datetime import datetime
 from pathlib import Path
@@ -24,6 +25,14 @@ from gaf_guard.toolkit.file_utils import resolve_file_paths
 
 
 GAF_GUARD_ROOT = Path(__file__).parent.parent.absolute()
+
+
+def signal_handler(sig, frame):
+    print("Exiting...")
+    for task in asyncio.tasks.all_tasks():
+        task.cancel()
+    sys.exit(0)
+
 
 # Apply CSS to hide chat_input when app is running (processing)
 st.markdown(

@@ -89,7 +89,7 @@ def client(
     port: Annotated[
         int,
         typer.Option(help="Please enter GAF Guard Port.", rich_help_panel="Port"),
-    ] = 8000,
+    ] = None,
 ):
     os.system("clear")
     console.rule(f"[bold blue]Launching GAF Guard {type.title()} Client[/bold blue]")
@@ -101,18 +101,23 @@ def client(
                 text=True,
             )
         elif type == "cli":
-            process = subprocess.Popen(
-                [
+            if port:
+                args = [
                     "python",
                     f"src/gaf_guard/clients/{type}.py",
                     "--host",
                     host,
                     "--port",
                     str(port),
-                ],
-                stderr=subprocess.STDOUT,
-                text=True,
-            )
+                ]
+            else:
+                args = [
+                    "python",
+                    f"src/gaf_guard/clients/{type}.py",
+                    "--host",
+                    host,
+                ]
+            process = subprocess.Popen(args, stderr=subprocess.STDOUT, text=True)
 
         # Wait for the process to fully terminate and get the return code
         return_code = process.wait()

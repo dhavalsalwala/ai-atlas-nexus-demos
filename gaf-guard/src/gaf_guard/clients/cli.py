@@ -230,7 +230,7 @@ def main(
             help="Please enter GAF Guard Port.",
             rich_help_panel="Port",
         ),
-    ] = 8000,
+    ] = None,
 ):
     os.system("clear")
 

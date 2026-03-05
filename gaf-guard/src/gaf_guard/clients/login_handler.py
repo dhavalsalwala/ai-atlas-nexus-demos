@@ -23,7 +23,7 @@ class LoginHandler:
 
     def create_client(self):
         try:
-            return Client(base_url=self.base_url, verify=True, timeout=25)
+            return Client(base_url=self.base_url, verify=True)
         except Exception as e:
             if isinstance(e, httpx.ConnectTimeout):
                 message = "Connection Timeout."

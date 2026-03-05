@@ -45,7 +45,7 @@ This project targets python version ">=3.11, <3.12". You can download specific v
    ```
    git clone git@github.com:IBM/ai-atlas-nexus-demos.git
    cd ai-atlas-nexus-demos/gaf-guard
-   conda create -n gaf-guard python=3.11
+   conda create -n gaf-guard python=3.12.0
    conda activate gaf-guard
    pip install -e ".[ollama]" # depending on which inference engine to use [ollama, wml, vllm]
    ```
@@ -73,7 +73,7 @@ This project targets python version ">=3.11, <3.12". You can download specific v
 
 - CLI Client: 
    ```
-   gaf-guard client --type cli --host localhost --port 8000
+   gaf-guard client --type cli --host http://localhost --port 8000
    ```
 
 ## Streamlit client demo

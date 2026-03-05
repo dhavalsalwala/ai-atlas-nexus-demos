@@ -5,13 +5,14 @@ import sys
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Optional
 
+import httpx
 import streamlit as st
-from acp_sdk.client import Client
 from acp_sdk.models import Message, MessagePart
 from rich.console import Console
 
+from gaf_guard.clients.login_handler import LoginHandler
 from gaf_guard.clients.stream_adaptors import get_adapter
 from gaf_guard.core.models import WorkflowMessage
 from gaf_guard.toolkit.enums import (
@@ -76,9 +77,9 @@ st.markdown(
 if "server_status" not in st.session_state:
     st.session_state.server_status = ServerStatus.DISCONNECTED
 if "host" not in st.session_state:
-    st.session_state.host = "localhost"
+    st.session_state.host = "http://localhost"
 if "port" not in st.session_state:
-    st.session_state.port = 8000
+    st.session_state.port = 0
 st.session_state.priority = ["low", "medium", "high"]
 st.session_state.initial_risks_master = ["Toxic output", "Hallucination"]
 st.set_page_config(
@@ -91,6 +92,7 @@ st.set_page_config(
     },
     # initial_sidebar_state="expanded",
 )
+
 console = Console(log_time=True)
 run_configs = {
     "RiskGeneratorAgent": {
@@ -240,7 +242,7 @@ def add_sidebar():
         )
         if hasattr(st.session_state, "client_session"):
             ai_atlas_button.markdown(
-                f"Client Id: {str(st.session_state.client_session._session.id)[0:13]} \n :violet-badge[:material/rocket_launch: Connected to :yellow[GAF Guard] Server:] :orange-badge[:material/check: {st.session_state.host}:{st.session_state.port}]",
+                f"Client Id: {str(st.session_state.client_session._session.id)[0:13]} \n :violet-badge[:material/rocket_launch: Connected to :yellow[GAF Guard] Server:] :orange-badge[:material/check: {st.session_state.base_url}]",
                 text_alignment="center",
             )
         else:
@@ -441,24 +443,19 @@ def initial_risks_selector():
 )
 def connect_screen_dialog():
 
-    async def ping_server():
-        await Client(
-            base_url=f"http://{st.session_state.host}:{st.session_state.port}",
-            verify=True,
-        ).ping()
-
     def server_connect():
         st.session_state.server_status = ServerStatus.CONNECTING
 
     with st.form("login_form"):
         st.session_state.host = st.text_input(
-            "GAF Guard Host",
+            "**GAF Guard Host**",
             value=st.session_state.host,
             disabled=st.session_state.server_status == ServerStatus.CONNECTING,
         )
         st.session_state.port = st.number_input(
-            "GAF Guard Port",
-            value=st.session_state.port,
+            "**GAF Guard Port** (Optional)",
+            value=None,
+            step=1,
             disabled=st.session_state.server_status == ServerStatus.CONNECTING,
         )
         submitted = st.form_submit_button(
@@ -466,24 +463,32 @@ def connect_screen_dialog():
         )
 
     if st.session_state.server_status == ServerStatus.FAILED:
-        st.error("Failed to connect. Please check hostname and port.", icon="🚨")
+        st.error(st.session_state.error, icon="🚨")
     elif submitted:
+        st.session_state.base_url = st.session_state.host + (
+            f":{int(st.session_state.port)}" if st.session_state.port else ""
+        )
         with st.status(
-            f"Connecting to GAF Guard using host: :blue[**{st.session_state.host}**] and port: :blue[**{st.session_state.port}**]",
+            f"Connecting to GAF Guard using host: :blue[**{st.session_state.base_url}**]",
             expanded=True,
         ) as status:
             try:
-                # ping server for health check
-                asyncio.run(ping_server())
-
-                client = Client(
-                    base_url=f"http://{st.session_state.host}:{st.session_state.port}",
-                    verify=True,
+                login_handler = LoginHandler(
+                    st.session_state.host, st.session_state.port
                 )
+
+                # ping server for health check
+                asyncio.run(login_handler.health_check())
+
+                client = login_handler.create_client()
                 st.write("Client created...")
                 time.sleep(0.5)
                 st.session_state.client_session = client.session()
                 st.write("Client session created...")
+            except Exception as e:
+                st.session_state.server_status = ServerStatus.FAILED
+                st.session_state.error = str(e)
+            else:
                 time.sleep(0.5)
                 st.session_state.server_status = ServerStatus.CONNECTED
 
@@ -511,13 +516,11 @@ def connect_screen_dialog():
                 )
 
                 status.update(
-                    label=f":material/rocket_launch: Connected to :yellow[**GAF Guard**] Server: :orange-badge[:material/check: {st.session_state.host}:{st.session_state.port}]",
+                    label=f":material/rocket_launch: Connected to :yellow[**GAF Guard**] Server: :orange-badge[:material/check: {st.session_state.base_url}]",
                     state="complete",
                     expanded=True,
                 )
                 time.sleep(1)
-            except Exception as e:
-                st.session_state.server_status = ServerStatus.FAILED
             finally:
                 st.rerun()
 

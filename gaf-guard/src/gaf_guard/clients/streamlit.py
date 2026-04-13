@@ -452,10 +452,9 @@ def connect_screen_dialog():
             value=st.session_state.host,
             disabled=st.session_state.server_status == ServerStatus.CONNECTING,
         )
-        st.session_state.port = st.number_input(
+        st.session_state.port = st.text_input(
             "**GAF Guard Port**",
             value=st.session_state.port,
-            step=1,
             disabled=st.session_state.server_status == ServerStatus.CONNECTING,
         )
         submitted = st.form_submit_button(
@@ -465,9 +464,7 @@ def connect_screen_dialog():
     if st.session_state.server_status == ServerStatus.FAILED:
         st.error(st.session_state.error, icon="🚨")
     elif submitted:
-        st.session_state.base_url = (
-            st.session_state.host + f":{int(st.session_state.port)}"
-        )
+        st.session_state.base_url = st.session_state.host + f":{st.session_state.port}"
         with st.status(
             f"Connecting to GAF Guard using host: :blue[**{st.session_state.base_url}**]",
             expanded=True,

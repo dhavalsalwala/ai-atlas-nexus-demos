@@ -157,11 +157,15 @@ def identify_ai_tasks(
     state: RiskGenerationState,
     config: RunnableConfig,
 ):
-    ai_tasks = ai_atlas_nexus.identify_ai_tasks_from_usecases(
+    response = ai_atlas_nexus.identify_ai_tasks_from_usecases(
         [state.user_intent], inference_engine, verbose=False
     )[0]
 
-    return {"identified_ai_tasks": ai_tasks.prediction}
+    return {
+        "identified_ai_tasks": [
+            task["ai_task"] for task in response.prediction["ai_tasks"]
+        ]
+    }
 
 
 # Node

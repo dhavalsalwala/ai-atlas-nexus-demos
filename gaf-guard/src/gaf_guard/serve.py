@@ -20,6 +20,7 @@ from acp_sdk.models import (
     Metadata,
 )
 from acp_sdk.server import Context, RunYield, RunYieldResume, Server
+from ai_atlas_nexus.exceptions import RiskInferenceError
 from langgraph.types import Command
 from rich import print as rprint
 from rich.console import Console
@@ -135,6 +136,8 @@ async def orchestrator(
         yield MessageAwaitRequest(
             message=Message(role="agent", parts=[MessagePart(content=str(e))])
         )
+    except RiskInferenceError as e:
+        LOGGER.error("Internal Server Error: " + str(e.message))
     except Exception as e:
         LOGGER.error("Internal Server Error: " + str(e))
 

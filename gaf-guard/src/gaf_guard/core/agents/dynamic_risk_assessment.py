@@ -98,9 +98,13 @@ def assess_risk(
     ]
 
     # Invoke inference service
-    responses_high = inference_engine.chat(
-        messages=messages_high,
-        verbose=False,
+    responses_high = (
+        inference_engine.chat(
+            messages=messages_high,
+            verbose=False,
+        )
+        if messages_high
+        else []
     )
 
     # Transition risks

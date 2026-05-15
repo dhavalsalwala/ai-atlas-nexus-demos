@@ -5,9 +5,12 @@ import sys
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List
+import transformers
+import warnings
 
-import httpx
+transformers.logging.set_verbosity_error()
+warnings.filterwarnings("ignore")
 import streamlit as st
 from acp_sdk.models import Message, MessagePart
 from rich.console import Console
@@ -23,7 +26,6 @@ from gaf_guard.toolkit.enums import (
     UserInputType,
 )
 from gaf_guard.toolkit.file_utils import resolve_file_paths
-
 
 GAF_GUARD_ROOT = Path(__file__).parent.parent.absolute()
 

@@ -12,7 +12,6 @@ from gaf_guard.core import ai_atlas_nexus
 from gaf_guard.core.agents import Agent
 from gaf_guard.core.decorators import workflow_step
 
-
 console = Console()
 
 
@@ -35,9 +34,14 @@ def get_usecase_domain(
 ):
     domain = ai_atlas_nexus.identify_domain_from_usecases(
         [state.user_intent], inference_engine, verbose=False
-    )[0]
+    )
 
-    return {"domain": domain.prediction["answer"]}
+    if "answer" in domain[0].prediction and not isinstance(domain[0].prediction, str):
+        domain = domain[0].prediction["answer"]
+    else:
+        domain = domain[0].prediction
+
+    return {"domain": domain}
 
 
 # Node
